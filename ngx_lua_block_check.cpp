@@ -78,8 +78,8 @@ static bool is_enabled() {
     return VAR_NAME != NULL;
 }
 
-static void record_time(timeval* tv1, timeval* tv2, lua_State* L) {
-    lua_Integer val = (tv2->tv_sec - tv1->tv_sec) * 1000000 + (tv2->tv_usec - tv1->tv_usec);
+static void record_time(timespec* tv1, timespec* tv2, lua_State* L) {
+    lua_Integer val = (tv2->tv_sec - tv1->tv_sec) * 1000000 + (tv2->tv_nsec - tv1->tv_nsec) / 1000;
     if (val <= 0) {
         return;
     }
@@ -116,13 +116,13 @@ int lua_resume(lua_State *L, int narg) {
         return lua_resume_f(L, narg);
     }
 
-    timeval tv1;
-    gettimeofday(&tv1, NULL);
+    timespec tv1;
+    clock_gettime(CLOCK_MONOTONIC, &tv1);
 
     int ret = lua_resume_f(L, narg);
 
-    timeval tv2;
-    gettimeofday(&tv2, NULL);
+    timespec tv2;
+    clock_gettime(CLOCK_MONOTONIC, &tv2);
 
     record_time(&tv1, &tv2, L);
 
@@ -152,13 +152,13 @@ int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc) {
         return lua_pcall_f(L, nargs, nresults, errfunc);
     }
 
-    timeval tv1;
-    gettimeofday(&tv1, NULL);
+    timespec tv1;
+    clock_gettime(CLOCK_MONOTONIC, &tv1);
 
     int ret = lua_pcall_f(L, nargs, nresults, errfunc);
 
-    timeval tv2;
-    gettimeofday(&tv2, NULL);
+    timespec tv2;
+    clock_gettime(CLOCK_MONOTONIC, &tv2);
 
     record_time(&tv1, &tv2, L);
 
