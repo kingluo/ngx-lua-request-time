@@ -15,6 +15,8 @@ The request time is the sum of the following metrics:
     * header_filter
     * body_filter
 
+**It's non-intrusive and zero-cost.**
+
 Usage:
 
 ```bash
