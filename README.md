@@ -36,3 +36,4 @@ make
 ## demo
 
 * [openresty](https://github.com/kingluo/ngx-lua-request-time/tree/main/demo/openresty)
+* [apisix](https://github.com/kingluo/ngx-lua-request-time/tree/main/demo/apisix)
