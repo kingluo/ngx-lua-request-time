@@ -1,6 +1,6 @@
 # ngx-lua-request-time
 
-It records the lua execution time per request in `ngx.ctx`.
+It records the lua execution time per request in `ngx.ctx`, in microsecond.
 
 The request time is the sum of the following metrics:
 
