@@ -37,5 +37,7 @@ make
 
 ## demo
 
+*Do not use the Alpine docker image, where the musl libc seems not LD_PRELOAD compatible.*
+
 * [openresty](https://github.com/kingluo/ngx-lua-request-time/tree/main/demo/openresty)
 * [apisix](https://github.com/kingluo/ngx-lua-request-time/tree/main/demo/apisix)
