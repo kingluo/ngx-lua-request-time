@@ -1,16 +1,10 @@
-#include <climits>
-#include <cstddef>
-#include <cstdint>
+#define _GNU_SOURCE
 #include <dlfcn.h>
-#include <errno.h>
-#include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <sys/types.h>
 #include <time.h>
 
-extern "C" {
 #define NGX_ERROR -1
 #define PHASE_SET 0x0001
 #define PHASE_REWRITE 0x0002
@@ -22,8 +16,8 @@ extern "C" {
 #define LUA_TNUMBER 3
 #define LUA_GLOBALSINDEX (-10002)
 
-struct lua_State;
-struct ngx_http_request_t;
+typedef void lua_State;
+typedef void ngx_http_request_t;
 typedef ptrdiff_t lua_Integer;
 typedef int (*lua_resume_t)(lua_State *L, int narg);
 typedef int (*lua_pcall_t)(lua_State *L, int nargs, int nresults, int errfunc);
@@ -54,31 +48,42 @@ static lua_pushinteger_t lua_pushinteger_f = NULL;
 
 static const char* VAR_NAME = NULL;
 
-static bool is_enabled() {
-    if (!lua_resume_f) {
-        lua_resume_f = (lua_resume_t)dlsym(RTLD_NEXT, "lua_resume");
-        lua_pcall_f = (lua_pcall_t)dlsym(RTLD_NEXT, "lua_pcall");
-        lua_type_f = (lua_type_t)dlsym(RTLD_NEXT, "lua_type");
-        lua_settop_f = (lua_settop_t)dlsym(RTLD_NEXT, "lua_settop");
-        lua_getfield_f = (lua_getfield_t)dlsym(RTLD_NEXT, "lua_getfield");
-        lua_setfield_f = (lua_setfield_t)dlsym(RTLD_NEXT, "lua_setfield");
-        ngx_http_lua_get_request_f = (ngx_http_lua_get_request_t)dlsym(RTLD_DEFAULT, "ngx_http_lua_get_request");
-        ngx_http_lua_ffi_get_phase_f = (ngx_http_lua_ffi_get_phase_t)dlsym(RTLD_DEFAULT, "ngx_http_lua_ffi_get_phase");
-        ngx_http_lua_traceback_f = (ngx_http_lua_traceback_t)dlsym(RTLD_DEFAULT, "ngx_http_lua_traceback");
-        lua_tocfunction_f = (lua_tocfunction_t)dlsym(RTLD_NEXT, "lua_tocfunction");
-        lua_tointeger_f = (lua_tointeger_t)dlsym(RTLD_NEXT, "lua_tointeger");
-        lua_pushinteger_f = (lua_pushinteger_t)dlsym(RTLD_NEXT, "lua_pushinteger");
+static int resolved = 0;
+#define CHECK_DLSYM(symbol, flag) \
+    symbol##_f = (symbol##_t)dlsym(flag, #symbol); \
+    if (!symbol##_f) resolve_err++;
+
+static int is_enabled() {
+    if (!resolved) {
+        int resolve_err = 0;
+
+        CHECK_DLSYM(lua_resume, RTLD_NEXT);
+        CHECK_DLSYM(lua_pcall, RTLD_NEXT);
+        CHECK_DLSYM(lua_type, RTLD_NEXT);
+        CHECK_DLSYM(lua_settop, RTLD_NEXT);
+        CHECK_DLSYM(lua_getfield, RTLD_NEXT);
+        CHECK_DLSYM(lua_setfield, RTLD_NEXT);
+        CHECK_DLSYM(ngx_http_lua_get_request, RTLD_DEFAULT);
+        CHECK_DLSYM(ngx_http_lua_ffi_get_phase, RTLD_DEFAULT);
+        CHECK_DLSYM(ngx_http_lua_traceback, RTLD_DEFAULT);
+        CHECK_DLSYM(lua_tocfunction, RTLD_NEXT);
+        CHECK_DLSYM(lua_tointeger, RTLD_NEXT);
+        CHECK_DLSYM(lua_pushinteger, RTLD_NEXT);
+
+        if (!resolve_err) {
+            resolved = 1;
+        }
 
         char* val = getenv("NGX_LUA_REQUEST_TIME_VAR_NAME");
-        if (val != nullptr) {
+        if (val != NULL) {
             VAR_NAME = strdup(val);
         }
     }
 
-    return VAR_NAME != NULL;
+    return resolved && VAR_NAME;
 }
 
-static void record_time(timespec* tv1, timespec* tv2, lua_State* L) {
+static void record_time(struct timespec* tv1, struct timespec* tv2, lua_State* L) {
     lua_Integer val = (tv2->tv_sec - tv1->tv_sec) * 1000000 + (tv2->tv_nsec - tv1->tv_nsec) / 1000;
     if (val <= 0) {
         return;
@@ -116,12 +121,12 @@ int lua_resume(lua_State *L, int narg) {
         return lua_resume_f(L, narg);
     }
 
-    timespec tv1;
+    struct timespec tv1;
     clock_gettime(CLOCK_MONOTONIC, &tv1);
 
     int ret = lua_resume_f(L, narg);
 
-    timespec tv2;
+    struct timespec tv2;
     clock_gettime(CLOCK_MONOTONIC, &tv2);
 
     record_time(&tv1, &tv2, L);
@@ -152,16 +157,15 @@ int lua_pcall(lua_State *L, int nargs, int nresults, int errfunc) {
         return lua_pcall_f(L, nargs, nresults, errfunc);
     }
 
-    timespec tv1;
+    struct timespec tv1;
     clock_gettime(CLOCK_MONOTONIC, &tv1);
 
     int ret = lua_pcall_f(L, nargs, nresults, errfunc);
 
-    timespec tv2;
+    struct timespec tv2;
     clock_gettime(CLOCK_MONOTONIC, &tv2);
 
     record_time(&tv1, &tv2, L);
 
     return ret;
-}
 }
