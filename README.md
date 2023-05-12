@@ -2,6 +2,10 @@
 
 It records the lua execution time per request in `ngx.ctx`, in microsecond.
 
+Check this blog for details:
+
+http://luajit.io/posts/openresty-lua-request-time/
+
 The request time is the sum of the following metrics:
 
 * `lua_resume`
